@@ -20,6 +20,7 @@ def current_timestamp():
 @pytest.fixture
 def homework_module():
     import homework
+
     return homework
 
 
@@ -27,18 +28,14 @@ def homework_module():
 def random_message():
     def random_string(string_length=15):
         letters = string.ascii_letters
-        return ''.join(random.choice(letters) for _ in range(string_length))
+        return "".join(random.choice(letters) for _ in range(string_length))
+
     return random_string()
 
 
 @pytest.fixture
 def data_with_new_hw_status(random_timestamp):
     return {
-        'homeworks': [
-            {
-                'homework_name': 'hw123',
-                'status': 'approved'
-            }
-        ],
-        'current_date': random_timestamp
+        "homeworks": [{"homework_name": "hw123", "status": "approved"}],
+        "current_date": random_timestamp,
     }
