@@ -11,19 +11,6 @@ from telegram.ext import Updater
 
 from exceptions import NoAPIAnswer
 
-"""
-Александр, привет! Не смог тебя найти в пачке по karpova1eks,
-так что пишу здесь уточнения.
-1. В функции check_response ты говоришь сперва проверить наличие homeworks,
-но если я делаю конструкцию типа
-if not response["homeworks"]:
-    -> if not isinstance(response.get("homeworks") и.т.п.
-то такую конструкцию не пропускает pytest. Или ты имел в виду что-то другое?
-2. В main та же ситуация, конструкцию if response["homeworks"] != [] и
-if len(response["homeworks"]) != 0 пропускает pytest,
-а if not response["homeworks"] - не пропускает.
-"""
-
 load_dotenv()
 
 PRACTICUM_TOKEN = os.getenv("PRACTICUM_TOKEN")
@@ -88,19 +75,16 @@ def get_api_answer(timestamp):
             params=payload,
             timeout=10,
         )
-        if homework_statuses.status_code != HTTPStatus.OK:
-            raise NoAPIAnswer(message="Ошибка! Неверный ответ сервера!")
-        return homework_statuses.json()
-
-    except NoAPIAnswer as error:
-        message = "Ошибка! Неверный ответ сервера!"
-        logging.error(message)
-        raise NoAPIAnswer(message, error)
 
     except Exception as error:
         message = "Ошибка! url-адрес недоступен!"
         logging.error(message)
         raise Exception(message, error)
+
+    if homework_statuses.status_code != HTTPStatus.OK:
+        message = "Ошибка! Неверный ответ сервера!"
+        raise NoAPIAnswer(message)
+    return homework_statuses.json()
 
 
 def check_response(response):
@@ -109,6 +93,10 @@ def check_response(response):
         message = "Ответ API пришёл не в форме словаря!"
         logging.error(message)
         raise TypeError(message)
+    elif "homeworks" not in response:
+        message = "В ответе отсутствует ключ homeworks!"
+        logging.error(message)
+        raise KeyError(message)
     elif not isinstance(response.get("homeworks"), list):
         message = "Ответ API  под ключом homeworks не в форме списка!"
         logging.error(message)
@@ -145,13 +133,11 @@ def main():
         try:
             response = get_api_answer(timestamp)
             check_response(response)
-            status_change = response["homeworks"]
-            if status_change != []:
-                first_element, *other_elements = status_change
-                message = parse_status(first_element)
+            homeworks_list = response["homeworks"]
+            if homeworks_list:
+                actual_homework, *_ = homeworks_list
+                message = parse_status(actual_homework)
                 send_message(bot, message)
-            else:
-                logging.debug("В домашке нет новых статусов!")
         except Exception as error:
             logging.error(f"Сбой в работе программы: {error}")
             send_message(bot, message)
@@ -161,4 +147,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    updater.idle()
